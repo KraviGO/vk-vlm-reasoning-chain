@@ -1,0 +1,6 @@
+outs:
+- md5: c9e930cf48d329492be8bc64b03e53bc.dir
+  size: 6605422
+  nfiles: 4
+  hash: md5
+  path: GQA-ru-test-instructions

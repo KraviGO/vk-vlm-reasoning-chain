@@ -1,0 +1,6 @@
+outs:
+- md5: bdb29e58030fe50d45d745ef91aa5133.dir
+  size: 3901982421
+  nfiles: 11
+  hash: md5
+  path: GQA-ru-train-images

@@ -1,0 +1,6 @@
+outs:
+- md5: 1e8dd461ffe7fc34dc2db5ee4b762eb0.dir
+  size: 65783888
+  nfiles: 4
+  hash: md5
+  path: GQA-ru-test-images
