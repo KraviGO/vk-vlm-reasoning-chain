@@ -1,0 +1,16 @@
+# ML & VLM core
+torch
+transformers
+peft
+datasets
+accelerate
+
+# API & Web UI
+fastapi
+uvicorn
+python-multipart
+gradio
+
+# MLOps & Experiment Tracking
+dvc
+mlflow
