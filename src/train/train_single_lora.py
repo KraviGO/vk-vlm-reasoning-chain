@@ -97,7 +97,7 @@ def main():
         num_train_epochs=1,
         weight_decay=0.01,
         logging_steps=10,
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         eval_steps=50,
         save_strategy="steps",
         save_steps=100,
