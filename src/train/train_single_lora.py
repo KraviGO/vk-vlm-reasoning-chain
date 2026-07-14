@@ -85,6 +85,7 @@ def main():
     for name, param in model.named_parameters():
         if "single_lora_baseline" in name:
             param.requires_grad = True
+            param.data = param.data.to(torch.float32)
 
     def collate_fn(batch):
         texts = []
@@ -131,6 +132,7 @@ def main():
         remove_unused_columns=False,
         report_to="mlflow",
         run_name="saiga-8b-single-lora",
+        fp16=True,
         max_grad_norm=0.5,
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False}
