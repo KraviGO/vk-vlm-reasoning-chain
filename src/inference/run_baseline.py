@@ -1,5 +1,6 @@
 import os
 import torch
+import dagshub
 import mlflow
 from tqdm import tqdm
 from datasets import load_from_disk
@@ -10,9 +11,13 @@ from src.utils.env_config import get_environment_settings
 def main():
     cfg = get_environment_settings()
 
-    mlflow.set_tracking_uri(cfg["mlflow_tracking_uri"])
-    experiment_name = "vk-vlm-reasoning-chain"
+    dagshub.init(
+        repo_owner="KraviGO",
+        repo_name="vk-vlm-reasoning-chain",
+        mlflow=True
+    )
 
+    experiment_name = "vk-vlm-reasoning-chain"
     try:
         exp = mlflow.get_experiment_by_name(experiment_name)
         if exp is not None and exp.lifecycle_stage == "deleted":

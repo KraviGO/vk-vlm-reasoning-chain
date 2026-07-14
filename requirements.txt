@@ -4,6 +4,7 @@ transformers
 peft
 datasets
 accelerate
+bitsandbytes
 
 # API & Web UI
 fastapi
@@ -12,5 +13,6 @@ python-multipart
 gradio
 
 # MLOps & Experiment Tracking
-dvc
+dvc[s3]
 mlflow
+dagshub
