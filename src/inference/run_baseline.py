@@ -92,6 +92,13 @@ def main():
         default=5,
         help="Number of samples to evaluate per dataset"
     )
+    parser.add_argument(
+        "--task",
+        type=str,
+        default="both",
+        choices=["gqa", "mmbench", "both"],
+        help="Which task/dataset to evaluate (gqa, mmbench, or both)"
+    )
     args = parser.parse_args()
 
     cfg = get_environment_settings()
@@ -116,42 +123,44 @@ def main():
     eval_samples = []
 
     # 1. Загрузка GQA-ru тестовых данных
-    print("\nЗагрузка тестового сплита GQA-ru...")
-    try:
-        test_inst = load_from_disk(cfg["instructions_dir"])['testdev']
-        test_imgs = load_from_disk(cfg["images_dir"])['testdev']
-        image_index = {str(img['id']): img['image'] for img in test_imgs}
+    if args.task in ["gqa", "both"]:
+        print("\nЗагрузка тестового сплита GQA-ru...")
+        try:
+            test_inst = load_from_disk(cfg["instructions_dir"])['testdev']
+            test_imgs = load_from_disk(cfg["images_dir"])['testdev']
+            image_index = {str(img['id']): img['image'] for img in test_imgs}
 
-        for idx in range(min(args.eval_limit, len(test_inst))):
-            sample = test_inst[idx]
-            eval_samples.append({
-                "source_dataset": "gqa",
-                "question": sample["question"],
-                "image": image_index.get(str(sample["imageId"])),
-                "ground_truth": sample["answer"],
-                "sample_raw": sample
-            })
-        print(f"Успешно добавлено вопросов GQA-ru: {min(args.eval_limit, len(test_inst))}")
-    except Exception as e:
-        print(f"[WARNING] Ошибка загрузки GQA-ru (проверь dvc pull): {e}")
+            for idx in range(min(args.eval_limit, len(test_inst))):
+                sample = test_inst[idx]
+                eval_samples.append({
+                    "source_dataset": "gqa",
+                    "question": sample["question"],
+                    "image": image_index.get(str(sample["imageId"])),
+                    "ground_truth": sample["answer"],
+                    "sample_raw": sample
+                })
+            print(f"Успешно добавлено вопросов GQA-ru: {min(args.eval_limit, len(test_inst))}")
+        except Exception as e:
+            print(f"[WARNING] Ошибка загрузки GQA-ru (проверь dvc pull): {e}")
 
     # 2. Загрузка MMBench-ru данных
-    print("\nЗагрузка сплита MMBench-ru...")
-    try:
-        from datasets import load_dataset
-        mmbench_ds = load_dataset("deepvk/MMBench-ru")["dev"]
-        for idx in range(min(args.eval_limit, len(mmbench_ds))):
-            sample = mmbench_ds[idx]
-            eval_samples.append({
-                "source_dataset": "mmbench",
-                "question": sample["question"],
-                "image": sample["image"],
-                "ground_truth": sample["answer"],
-                "sample_raw": sample
-            })
-        print(f"Успешно добавлено вопросов MMBench-ru: {min(args.eval_limit, len(mmbench_ds))}")
-    except Exception as e:
-        print(f"[WARNING] Ошибка загрузки MMBench-ru: {e}")
+    if args.task in ["mmbench", "both"]:
+        print("\nЗагрузка сплита MMBench-ru...")
+        try:
+            from datasets import load_dataset
+            mmbench_ds = load_dataset("deepvk/MMBench-ru")["dev"]
+            for idx in range(min(args.eval_limit, len(mmbench_ds))):
+                sample = mmbench_ds[idx]
+                eval_samples.append({
+                    "source_dataset": "mmbench",
+                    "question": sample["question"],
+                    "image": sample["image"],
+                    "ground_truth": sample["answer"],
+                    "sample_raw": sample
+                })
+            print(f"Успешно добавлено вопросов MMBench-ru: {min(args.eval_limit, len(mmbench_ds))}")
+        except Exception as e:
+            print(f"[WARNING] Ошибка загрузки MMBench-ru: {e}")
 
     if not eval_samples:
         print("[ERROR] Нет доступных тестовых примеров для инференса!")
