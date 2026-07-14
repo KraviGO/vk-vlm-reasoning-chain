@@ -101,27 +101,15 @@ def main():
         inputs = processor(text=texts, images=images, return_tensors="pt", padding=True)
         labels = inputs["input_ids"].clone()
 
-        # Получаем ID токенов маркера ответа ассистента для Саги (Llama-3 шаблон)
-        assistant_marker = processor.tokenizer.encode("<|start_header_id|>assistant<|end_header_id|>\n",
-                                                      add_special_tokens=False)
-        marker_len = len(assistant_marker)
-
         for i in range(len(batch)):
-            input_ids_list = inputs["input_ids"][i].tolist()
+            user_messages = [{"role": "user", "content": batch[i]["query"]}]
+            user_prompt = processor.tokenizer.apply_chat_template(user_messages, tokenize=False,
+                                                                  add_generation_prompt=True)
 
-            # Динамически ищем, где в итоговом тензоре начинается реплика ассистента
-            match_idx = -1
-            for idx in range(len(input_ids_list) - marker_len + 1):
-                if input_ids_list[idx:idx + marker_len] == assistant_marker:
-                    match_idx = idx + marker_len
-                    break
+            user_inputs = processor(text=[user_prompt], images=[batch[i]["image"]], return_tensors="pt")
+            user_token_len = user_inputs["input_ids"].shape[1]
 
-            if match_idx != -1:
-                # Маскируем всё, что идет до текста ответа (включая развернутые имидж-токены)
-                labels[i, :match_idx] = -100
-            else:
-                # В случае форс-мажора маскируем всю строку, чтобы не ломать градиенты
-                labels[i, :] = -100
+            labels[i, :user_token_len] = -100
 
         labels[labels == processor.tokenizer.pad_token_id] = -100
         inputs["labels"] = labels
