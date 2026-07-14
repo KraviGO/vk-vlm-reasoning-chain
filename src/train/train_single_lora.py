@@ -113,7 +113,6 @@ def main():
         eval_steps=50,
         save_strategy="steps",
         save_steps=100,
-        fp16=True,
         remove_unused_columns=False,
         report_to="mlflow",
         run_name="saiga-8b-single-lora"
