@@ -69,7 +69,14 @@ def main():
         task_type="CAUSAL_LM"
     )
 
-    model = get_peft_model(model, peft_config)
+    if hasattr(model, "add_adapter"):
+        print("[INFO] Базовая модель уже содержит Peft-адаптеры. Добавляем новый кастомный адаптер...")
+        model.add_adapter(peft_config, adapter_name="single_lora_baseline")
+        model.set_adapter("single_lora_baseline")
+    else:
+        print("[INFO] Инициализируем стандартный PEFT слой...")
+        model = get_peft_model(model, peft_config)
+
     model.print_trainable_parameters()
 
     def collate_fn(batch):
@@ -112,8 +119,7 @@ def main():
         args=training_args,
         train_dataset=dataset["train"],
         eval_dataset=dataset["validation"],
-        data_collator=collate_fn,
-        peft_config=peft_config
+        data_collator=collate_fn
     )
 
     print("Запуск обучения Single-LoRA...")
