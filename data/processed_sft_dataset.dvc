@@ -1,0 +1,6 @@
+outs:
+- md5: 4fdf397704c5116cf68f7f2598c6d4b9.dir
+  size: 130003747
+  nfiles: 7
+  hash: md5
+  path: processed_sft_dataset
