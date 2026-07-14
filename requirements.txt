@@ -5,6 +5,7 @@ peft
 datasets
 accelerate
 bitsandbytes
+trl
 
 # API & Web UI
 fastapi
