@@ -1,5 +1,6 @@
 import os
 import glob
+import argparse
 import torch
 import dagshub
 import mlflow
@@ -15,6 +16,15 @@ from datasets import load_from_disk
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Train single LoRA adapter")
+    parser.add_argument("--adapter_name", type=str, default="gqa_expert", help="PEFT adapter name")
+    parser.add_argument("--output_dir", type=str, default="models/gqa_expert", help="Output directory for trained weights")
+    parser.add_argument("--dataset_path", type=str, default="data/processed_sft_dataset", help="Path to processed dataset")
+    parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs")
+    parser.add_argument("--batch_size", type=int, default=2, help="Train batch size per device")
+    parser.add_argument("--learning_rate", type=float, default=2e-4, help="Learning rate")
+    args = parser.parse_args()
+
     try:
         dagshub.init(
             repo_owner="KraviGO",
@@ -36,11 +46,8 @@ def main():
         model_id = "deepvk/llava-saiga-8b"
         print(f"\n[INFO] Локальная модель не найдена. Обучаем на базе HF: {model_id}")
 
-    dataset_path = "data/processed_sft_dataset"
-    output_dir = "models/single_lora_baseline"
-
-    print("Загрузка подготовленного датасета...")
-    dataset = load_from_disk(dataset_path)
+    print(f"Загрузка подготовленного датасета из: {args.dataset_path}")
+    dataset = load_from_disk(args.dataset_path)
 
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -65,25 +72,27 @@ def main():
 
     model = prepare_model_for_kbit_training(model)
 
+    # Добавлены gate_proj, up_proj, down_proj
     peft_config = LoraConfig(
         r=8,
         lora_alpha=16,
-        target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],
+        target_modules=["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM"
     )
 
     if hasattr(model, "add_adapter"):
-        print("[INFO] Базовая модель уже содержит Peft-адаптеры. Добавляем новый кастомный адаптер...")
-        model.add_adapter(peft_config, adapter_name="single_lora_baseline")
-        model.set_adapter("single_lora_baseline")
+        print(f"[INFO] Базовая модель уже содержит Peft-адаптеры. Добавляем новый кастомный адаптер: {args.adapter_name}...")
+        model.add_adapter(peft_config, adapter_name=args.adapter_name)
+        model.set_adapter(args.adapter_name)
     else:
-        print("[INFO] Инициализируем стандартный PEFT слой...")
-        model = get_peft_model(model, peft_config)
+        print(f"[INFO] Инициализируем стандартный PEFT слой для адаптера: {args.adapter_name}...")
+        model = get_peft_model(model, peft_config, adapter_name=args.adapter_name)
 
+    # Настраиваем градиенты под имя адаптера
     for name, param in model.named_parameters():
-        if "single_lora_baseline" in name:
+        if args.adapter_name in name:
             param.requires_grad = True
             param.data = param.data.to(torch.float32)
 
@@ -118,11 +127,11 @@ def main():
         return inputs
 
     training_args = TrainingArguments(
-        output_dir=output_dir,
-        learning_rate=2e-4,
-        per_device_train_batch_size=2,
+        output_dir=args.output_dir,
+        learning_rate=args.learning_rate,
+        per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=4,
-        num_train_epochs=1,
+        num_train_epochs=args.epochs,
         weight_decay=0.01,
         logging_steps=10,
         eval_strategy="steps",
@@ -131,7 +140,7 @@ def main():
         save_steps=100,
         remove_unused_columns=False,
         report_to="mlflow",
-        run_name="saiga-8b-single-lora",
+        run_name=f"saiga-8b-{args.adapter_name}",
         fp16=True,
         max_grad_norm=0.5,
         gradient_checkpointing=True,
@@ -146,18 +155,19 @@ def main():
         data_collator=collate_fn
     )
 
-    print("Запуск обучения Single-LoRA...")
+    print(f"Запуск обучения LoRA-адаптера {args.adapter_name}...")
 
-    with mlflow.start_run(run_name="saiga-8b-single-lora"):
+    with mlflow.start_run(run_name=f"saiga-8b-{args.adapter_name}"):
         mlflow.log_param("r", 8)
         mlflow.log_param("alpha", 16)
+        mlflow.log_param("adapter_name", args.adapter_name)
         mlflow.log_param("dataset_size", len(dataset["train"]))
 
         trainer.train()
 
-        print("Сохранение адаптера...")
-        trainer.model.save_pretrained(output_dir)
-        processor.save_pretrained(output_dir)
+        print(f"Сохранение адаптера в {args.output_dir}...")
+        trainer.model.save_pretrained(args.output_dir)
+        processor.save_pretrained(args.output_dir)
 
     print("Обучение завершено!")
 

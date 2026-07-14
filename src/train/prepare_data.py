@@ -1,5 +1,6 @@
 import os
 import random
+import argparse
 from datasets import load_from_disk, Dataset, DatasetDict
 
 
@@ -14,7 +15,10 @@ def format_llava_sample(sample, task_type):
     question = sample.get("question", "")
     answer = sample.get("answer", "")
 
-    prompt = f"<image>\n{question}"
+    if task_type == "gqa":
+        prompt = f"<image>\n{question}\nОтветь одним словом."
+    else:
+        prompt = f"<image>\n{question}"
 
     return {
         "query": prompt,
@@ -24,14 +28,19 @@ def format_llava_sample(sample, task_type):
 
 
 def main():
-    instructions_path = "data/GQA-ru-train-instructions"
-    images_path = "data/GQA-ru-train-images"
-    output_path = "data/processed_sft_dataset"
+    parser = argparse.ArgumentParser(description="Prepare dataset for SFT Trainer")
+    parser.add_argument("--task", type=str, default="gqa", choices=["gqa", "mmbench"], help="Task type (gqa or mmbench)")
+    parser.add_argument("--instructions_path", type=str, default="data/GQA-ru-train-instructions", help="Path to instructions dataset")
+    parser.add_argument("--images_path", type=str, default="data/GQA-ru-train-images", help="Path to images dataset")
+    parser.add_argument("--output_path", type=str, default="data/processed_sft_dataset", help="Output path for processed dataset")
+    parser.add_argument("--max_samples", type=int, default=3000, help="Maximum number of samples to process")
+    args = parser.parse_args()
 
-    print("Загрузка сырых датасетов GQA-ru из папок DVC...")
+    print(f"Запуск подготовки данных для задачи: {args.task}")
+    print("Загрузка сырых датасетов из папок DVC...")
     try:
-        inst_data = load_from_disk(instructions_path)
-        img_data = load_from_disk(images_path)
+        inst_data = load_from_disk(args.instructions_path)
+        img_data = load_from_disk(args.images_path)
 
         if isinstance(inst_data, DatasetDict):
             split_name = list(inst_data.keys())[0]
@@ -65,7 +74,7 @@ def main():
 
     formatted_samples = []
 
-    max_samples = min(3000, len(inst_dataset))
+    max_samples = min(args.max_samples, len(inst_dataset))
     random.seed(42)
 
     indices = list(range(len(inst_dataset)))
@@ -81,7 +90,7 @@ def main():
         if raw_image is None:
             continue
 
-        formatted = format_llava_sample(sample, task_type="gqa")
+        formatted = format_llava_sample(sample, task_type=args.task)
         formatted["image"] = raw_image
         formatted_samples.append(formatted)
 
@@ -97,8 +106,8 @@ def main():
         'validation': split_dataset['test']
     })
 
-    os.makedirs(output_path, exist_ok=True)
-    final_dict.save_to_disk(output_path)
+    os.makedirs(args.output_path, exist_ok=True)
+    final_dict.save_to_disk(args.output_path)
     print(f"Успешно подготовлено и сохранено! Train: {len(final_dict['train'])}, Val: {len(final_dict['validation'])}")
 
 
