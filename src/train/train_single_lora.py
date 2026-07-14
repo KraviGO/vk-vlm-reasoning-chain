@@ -52,6 +52,9 @@ def main():
     print("Загрузка процессора и квантованной модели...")
     processor = AutoProcessor.from_pretrained(model_id)
 
+    processor.patch_size = 14
+    processor.num_additional_image_tokens = 0
+
     model = LlavaForConditionalGeneration.from_pretrained(
         model_id,
         quantization_config=bnb_config,
