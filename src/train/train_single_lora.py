@@ -21,6 +21,7 @@ def main():
     parser.add_argument("--output_dir", type=str, default="models/gqa_expert", help="Output directory for trained weights")
     parser.add_argument("--dataset_path", type=str, default="data/processed_sft_dataset", help="Path to processed dataset")
     parser.add_argument("--epochs", type=int, default=1, help="Number of training epochs")
+    parser.add_argument("--max_steps", type=int, default=-1, help="Maximum number of training steps (-1 to disable)")
     parser.add_argument("--batch_size", type=int, default=2, help="Train batch size per device")
     parser.add_argument("--learning_rate", type=float, default=2e-4, help="Learning rate")
     args = parser.parse_args()
@@ -132,6 +133,7 @@ def main():
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=4,
         num_train_epochs=args.epochs,
+        max_steps=args.max_steps,
         weight_decay=0.01,
         logging_steps=10,
         eval_strategy="steps",
