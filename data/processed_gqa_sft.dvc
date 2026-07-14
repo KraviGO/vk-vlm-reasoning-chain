@@ -1,0 +1,6 @@
+outs:
+- md5: 6bb8450feeb6ba8effa635c7c7a95fd9.dir
+  size: 927538758
+  nfiles: 9
+  hash: md5
+  path: processed_gqa_sft
