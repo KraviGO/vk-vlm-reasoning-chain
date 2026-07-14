@@ -7,11 +7,11 @@ from transformers import (
     LlavaForConditionalGeneration,
     AutoProcessor,
     BitsAndBytesConfig,
-    TrainingArguments
+    TrainingArguments,
+    Trainer
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from datasets import load_from_disk
-from trl import SFTTrainer
 
 
 def main():
@@ -77,7 +77,9 @@ def main():
         print("[INFO] Инициализируем стандартный PEFT слой...")
         model = get_peft_model(model, peft_config)
 
-    # model.print_trainable_parameters()
+    for name, param in model.named_parameters():
+        if "single_lora_baseline" in name:
+            param.requires_grad = True
 
     def collate_fn(batch):
         texts = []
@@ -114,7 +116,7 @@ def main():
         run_name="saiga-8b-single-lora"
     )
 
-    trainer = SFTTrainer(
+    trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=dataset["train"],
