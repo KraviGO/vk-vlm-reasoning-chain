@@ -30,15 +30,38 @@ def main():
 
     print("Загрузка сырых датасетов GQA-ru из папок DVC...")
     try:
-        inst_dataset = load_from_disk(instructions_path)
-        img_dataset = load_from_disk(images_path)
+        inst_data = load_from_disk(instructions_path)
+        img_data = load_from_disk(images_path)
+
+        if isinstance(inst_data, DatasetDict):
+            split_name = list(inst_data.keys())[0]
+            print(f"[INFO] Инструкции загружены как DatasetDict. Используем сплит: {split_name}")
+            inst_dataset = inst_data[split_name]
+        else:
+            inst_dataset = inst_data
+
+        if isinstance(img_data, DatasetDict):
+            split_name = list(img_data.keys())[0]
+            print(f"[INFO] Картинки загружены как DatasetDict. Используем сплит: {split_name}")
+            img_dataset = img_data[split_name]
+        else:
+            img_dataset = img_data
+
         print(f"Загружено инструкций: {len(inst_dataset)}, картинок: {len(img_dataset)}")
     except Exception as e:
         print(f"Ошибка: Не удалось загрузить датасеты. Проверь пути! {e}")
         return
 
     print("Индексация картинок по ID...")
-    image_index = {str(img['id']): img['image'] for img in img_dataset}
+    image_index = {}
+    for i in range(len(img_dataset)):
+        row = img_dataset[i]
+        img_id = str(row.get('id', row.get('imageId', '')))
+        img_val = row.get('image')
+        if img_id and img_val:
+            image_index[img_id] = img_val
+
+    print(f"Индексировано уникальных картинок: {len(image_index)}")
 
     formatted_samples = []
 
@@ -52,7 +75,7 @@ def main():
     print(f"Форматирование {len(selected_indices)} примеров...")
     for idx in selected_indices:
         sample = inst_dataset[idx]
-        img_id = str(sample.get('imageId'))
+        img_id = str(sample.get('imageId', sample.get('id', '')))
 
         raw_image = image_index.get(img_id)
         if raw_image is None:
@@ -61,6 +84,10 @@ def main():
         formatted = format_llava_sample(sample, task_type="gqa")
         formatted["image"] = raw_image
         formatted_samples.append(formatted)
+
+    if not formatted_samples:
+        print("[ERROR] Не удалось сопоставить инструкции с картинками! Проверь ключи ID.")
+        return
 
     sft_dataset = Dataset.from_list(formatted_samples)
 
