@@ -77,7 +77,7 @@ def main():
         print("[INFO] Инициализируем стандартный PEFT слой...")
         model = get_peft_model(model, peft_config)
 
-    model.print_trainable_parameters()
+    # model.print_trainable_parameters()
 
     def collate_fn(batch):
         texts = []
