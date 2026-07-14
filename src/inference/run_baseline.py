@@ -283,7 +283,7 @@ def main():
             else:
                 if has_gqa_adapter:
                     model.set_adapter("gqa_expert")
-                max_new_tokens = 3
+                max_new_tokens = 15
                 prompt_text = f"<image>\n{question}\nОтветь одним словом."
 
             # Формирование промпта в Saiga-шаблоне
