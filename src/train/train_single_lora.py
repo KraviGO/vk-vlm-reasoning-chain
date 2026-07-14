@@ -45,7 +45,7 @@ def main():
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float32,
+        bnb_4bit_compute_dtype=torch.float16,
         bnb_4bit_use_double_quant=True
     )
 
@@ -59,7 +59,7 @@ def main():
         model_id,
         quantization_config=bnb_config,
         device_map="auto",
-        torch_dtype=torch.float32,
+        torch_dtype=torch.float16,
         low_cpu_mem_usage=True
     )
 
@@ -130,7 +130,9 @@ def main():
         save_steps=100,
         remove_unused_columns=False,
         report_to="mlflow",
-        run_name="saiga-8b-single-lora"
+        run_name="saiga-8b-single-lora",
+        fp16=True,
+        max_grad_norm=0.5
     )
 
     trainer = Trainer(
