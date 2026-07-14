@@ -97,8 +97,20 @@ def main():
             images.append(example["image"])
 
         inputs = processor(text=texts, images=images, return_tensors="pt", padding=True)
-        inputs["labels"] = inputs["input_ids"].clone()
-        inputs["labels"][inputs["labels"] == processor.tokenizer.pad_token_id] = -100
+
+        labels = inputs["input_ids"].clone()
+
+        for i in range(len(texts)):
+            user_messages = [{"role": "user", "content": batch[i]["query"]}]
+            user_prompt = processor.tokenizer.apply_chat_template(user_messages, tokenize=False,
+                                                                  add_generation_prompt=True)
+            user_token_len = len(processor.tokenizer.encode(user_prompt))
+
+            labels[i, :user_token_len] = -100
+
+        labels[labels == processor.tokenizer.pad_token_id] = -100
+        inputs["labels"] = labels
+
         return inputs
 
     training_args = TrainingArguments(
