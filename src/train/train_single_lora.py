@@ -131,8 +131,9 @@ def main():
         remove_unused_columns=False,
         report_to="mlflow",
         run_name="saiga-8b-single-lora",
-        fp16=True,
-        max_grad_norm=0.5
+        max_grad_norm=0.5,
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False}
     )
 
     trainer = Trainer(
