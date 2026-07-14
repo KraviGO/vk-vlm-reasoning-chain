@@ -1,4 +1,6 @@
 import os
+import argparse
+import glob
 import torch
 import dagshub
 import mlflow
@@ -9,6 +11,15 @@ from src.utils.env_config import get_environment_settings
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Run VLM baseline inference")
+    parser.add_argument(
+        "--model_path",
+        type=str,
+        default=None,
+        help="Path to local model weights or Hugging Face model ID"
+    )
+    args = parser.parse_args()
+
     cfg = get_environment_settings()
 
     dagshub.init(
@@ -40,16 +51,19 @@ def main():
     print("Индексация изображений по ID...")
     image_index = {str(img['id']): img['image'] for img in test_imgs}
 
-    KAGGLE_PATH = "/kaggle/input/llava-saiga-8b/llava-saiga-8b-local"
-
-    if os.path.exists(KAGGLE_PATH):
-        model_id = KAGGLE_PATH
-        print(f"\n[INFO] Найдена локальная модель в Kaggle! Загружаем из: {model_id}")
+    if args.model_path:
+        model_id = args.model_path
+        print(f"\n[INFO] Используем переданный путь к модели: {model_id}")
     else:
-        model_id = "deepvk/llava-saiga-8b"
-        print(f"\n[INFO] Локальный путь не найден. Качаем из Hugging Face Hub: {model_id}")
+        kaggle_configs = glob.glob("/kaggle/input/**/config.json", recursive=True)
+        if kaggle_configs:
+            model_id = os.path.dirname(kaggle_configs[0])
+            print(f"\n[INFO] Параметр --model_path не задан. Автоматически нашли локальную модель в Kaggle: {model_id}")
+        else:
+            model_id = "deepvk/llava-saiga-8b"
+            print(f"\n[INFO] Локальный путь не найден. Будет выполнена загрузка из Hugging Face Hub: {model_id}")
 
-    print(f"\nЗагрузка компонентов модели...")
+    print(f"\nЗагрузка компонентов модели из: {model_id}...")
 
     processor = AutoProcessor.from_pretrained(model_id)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
