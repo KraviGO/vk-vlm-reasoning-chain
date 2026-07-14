@@ -40,8 +40,16 @@ def main():
     print("Индексация изображений по ID...")
     image_index = {str(img['id']): img['image'] for img in test_imgs}
 
-    model_id = "deepvk/llava-saiga-8b"
-    print(f"\nЗагрузка компонентов модели {model_id}...")
+    KAGGLE_PATH = "/kaggle/input/llava-saiga-8b/llava-saiga-8b-local"
+
+    if os.path.exists(KAGGLE_PATH):
+        model_id = KAGGLE_PATH
+        print(f"\n[INFO] Найдена локальная модель в Kaggle! Загружаем из: {model_id}")
+    else:
+        model_id = "deepvk/llava-saiga-8b"
+        print(f"\n[INFO] Локальный путь не найден. Качаем из Hugging Face Hub: {model_id}")
+
+    print(f"\nЗагрузка компонентов модели...")
 
     processor = AutoProcessor.from_pretrained(model_id)
     tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -67,7 +75,7 @@ def main():
     print("Модель готова к инференсу!")
 
     is_kaggle = os.path.exists("/kaggle/working")
-    eval_limit = 100 if is_kaggle else 1
+    eval_limit = 100 if is_kaggle else 50
 
     correct_predictions = 0
     evaluated_count = 0
